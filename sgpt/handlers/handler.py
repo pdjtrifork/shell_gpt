@@ -8,8 +8,10 @@ from ..role import SystemRole
 
 
 class Handler:
-    def __init__(self, client: OpenAIClient, role: SystemRole) -> None:
-        self.client = client
+    def __init__(self, role: SystemRole) -> None:
+        self.client = OpenAIClient(
+            cfg.get("OPENAI_API_HOST"), cfg.get("OPENAI_API_KEY")
+        )
         self.role = role
         self.color = cfg.get("DEFAULT_COLOR")
 
@@ -25,8 +27,11 @@ class Handler:
     def handle(self, prompt: str, **kwargs: Any) -> str:
         messages = self.make_messages(self.make_prompt(prompt))
         full_completion = ""
+        stream = cfg.get("DISABLE_STREAMING") == "false"
+        if not stream:
+            typer.echo("Loading...\r", nl=False)
         for word in self.get_completion(messages=messages, **kwargs):
             typer.secho(word, fg=self.color, bold=True, nl=False)
             full_completion += word
-        typer.echo()
+        typer.echo("\033[K" if not stream else "")  # Overwrite "loading..."
         return full_completion
